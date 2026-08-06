@@ -101,7 +101,7 @@ def main():
             if not cmd:
                 continue
                 
-            parts = cmd.split()
+            parts = cmd.split(maxsplit=1)
             op = parts[0].upper()
             
             if op == "QUIT" or op == "EXIT":
