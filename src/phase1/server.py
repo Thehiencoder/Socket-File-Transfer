@@ -49,6 +49,9 @@ def handle_client(conn, addr):
                 filepath = get_safe_path(STORAGE_DIR, filename)
                 send_command(conn, "ACK READY")
                 
+                if os.path.exists(filepath):
+                    open(filepath, 'w').close()
+
                 # Receive expected file size
                 file_info = recv_command(conn)
                 if not file_info.startswith("SIZE "):
