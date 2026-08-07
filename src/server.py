@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from config import PORT, HOST, CHUNK_SIZE, MAX_CLIENTS
 from common.logger import setup_logger
-from src.phase1.protocol import recv_command, send_command, send_file_chunk, recv_file_chunk
+from src.protocol import recv_command, send_command, send_file_chunk, recv_file_chunk
 from common.checksum import calculate_checksum
 from common.file_manager import get_safe_path, write_file_chunk, get_file_size, read_file_chunk
 

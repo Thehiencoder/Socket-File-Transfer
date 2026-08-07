@@ -5,7 +5,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from config import PORT, HOST, CHUNK_SIZE
-from src.phase1.protocol import send_command, recv_command, send_file_chunk, recv_file_chunk
+from src.protocol import send_command, recv_command, send_file_chunk, recv_file_chunk
 from common.checksum import calculate_checksum
 from common.file_manager import get_file_size, read_file_chunk, write_file_chunk
 

@@ -5,7 +5,7 @@ import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import PORT, HOST
-from src.phase1.protocol import send_command, recv_command
+from src.protocol import send_command, recv_command
 
 def test_disconnect():
     """Test immediate client disconnection right after establishing a connection."""
