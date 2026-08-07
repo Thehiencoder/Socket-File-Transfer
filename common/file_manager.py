@@ -17,11 +17,14 @@ def sanitize_filename(filename: str) -> str:
     # Get the base filename, stripping any directory paths
     return os.path.basename(filename)
 
-def get_safe_path(storage_dir: str, filename: str) -> str:
-    """Generate a safe absolute path for reading/writing."""
+def get_safe_path(storage_dir: str, filename: str, username: str = "default") -> str:
+    """Generate a safe absolute path for reading/writing, partitioned by username."""
     safe_name = sanitize_filename(filename)
-    # Join with root directory to ensure safety
-    return os.path.join(os.path.abspath(storage_dir), safe_name)
+    safe_user = sanitize_filename(username)
+    user_dir = os.path.join(os.path.abspath(storage_dir), safe_user)
+    os.makedirs(user_dir, exist_ok=True)
+    # Join with user directory to ensure safety and isolation
+    return os.path.join(user_dir, safe_name)
 
 def read_file_chunk(filepath: str, offset: int, chunk_size: int) -> bytes:
     """Read a chunk of data from a specific offset."""

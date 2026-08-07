@@ -5,37 +5,39 @@ import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import PORT, HOST
-from src.protocol import send_command, recv_command
+from src.protocol import Opcode, pack_upload_req
+import struct
 
-def test_disconnect():
-    """Test immediate client disconnection right after establishing a connection."""
-    print("Testing immediate disconnect...")
+def test_disconnect_binary():
+    """Test client disconnection mid-transfer during binary UPLOAD_REQ."""
+    print("Testing disconnect during binary UPLOAD_REQ...")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect((HOST, PORT))
         print("Connected.")
-        # Disconnect immediately without sending any data
-        sock.close()
-        print("Disconnected. Server should not crash.")
-    except Exception as e:
-        print(f"Error: {e}")
         
-def test_disconnect_mid_transfer():
-    """Test client disconnection in the middle of sending a framed command."""
-    print("Testing disconnect during command...")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((HOST, PORT))
-        print("Connected.")
-        # Send half of a command (4-byte length prefix specifying 10 bytes, but only sending 4 payload bytes)
-        sock.sendall(b"\x00\x00\x00\x0aUPLO")
+        # Simulate login handshake
+        login_payload = b"test_user"
+        login_header = struct.pack("!IHH", len(login_payload), Opcode.LOGIN, 0)
+        sock.sendall(login_header + login_payload)
+        
+        # Receive login ACK
+        time.sleep(0.5)
+        
+        # Send UPLOAD_REQ but disconnect before finishing the payload transmission
+        filename = "test_resume.dat"
+        file_size = 1024 * 1024  # 1MB
+        req_payload = pack_upload_req(file_size, filename)
+        
+        # Send header and only a partial payload (first 5 bytes)
+        header = struct.pack("!IHH", len(req_payload), Opcode.UPLOAD_REQ, 1)
+        sock.sendall(header + req_payload[:5])
+        
         time.sleep(1)
         sock.close()
-        print("Disconnected mid-command. Server should not crash.")
+        print("Disconnected mid-command. Server should not crash and should log connection reset.")
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    test_disconnect()
-    time.sleep(1)
-    test_disconnect_mid_transfer()
+    test_disconnect_binary()
