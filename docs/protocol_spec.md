@@ -68,3 +68,23 @@ Mọi gói tin truyền đi trong Giai đoạn 2 đều tuân theo một Header 
 3. Server gửi lại `ACK` (Payload: `10485760` đóng gói 8 byte).
 4. Client nhận được `ACK`, đọc file từ byte thứ 10485760.
 5. Client liên tục gửi `FILE_CHUNK` đến khi hết file.
+
+---
+
+## 5. Ví dụ Hex Dump thực tế (Gói tin LOGIN)
+
+Giả sử Client gửi lệnh **LOGIN** với Username là `"Alice"` (`5` bytes). Client có `UserID` tạm thời là `0`.
+- **Length**: 5 bytes (0x00 00 00 05)
+- **Opcode**: 1 (0x00 01)
+- **UserID**: 0 (0x00 00)
+- **Payload**: "Alice" (0x41 0x6C 0x69 0x63 0x65)
+
+**Hex Dump toàn bộ gói tin (13 bytes):**
+```text
+00 00 00 05 00 01 00 00 41 6C 69 63 65
+|----Length---|--Op-|-ID--|--Payload---|
+```
+- `00 00 00 05`: 4 byte Header mô tả Length = 5.
+- `00 01`: 2 byte Header mô tả Opcode = 1 (LOGIN).
+- `00 00`: 2 byte Header mô tả UserID = 0.
+- `41 6c 69 63 65`: 5 byte Payload chứa chuỗi ASCII "Alice".
