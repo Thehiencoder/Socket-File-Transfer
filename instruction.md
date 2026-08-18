@@ -22,7 +22,8 @@ Server sử dụng kiến trúc Bất đồng bộ (Asyncio) và có cơ chế g
    ```bash
    python src/server.py
    ```
-3. Server sẽ báo `Phase 2 Async Server started on ('127.0.0.1', 8080)`. Hãy giữ Terminal này luôn mở.
+   *(Mẹo: Ta có thể thêm cờ lệnh để cấu hình nhanh, ví dụ: `python src/server.py --port 9090 --speed 1000`)*
+3. Server sẽ báo `Phase 2 Async Server started...`. Hãy giữ Terminal này luôn mở.
 
 ---
 
@@ -33,6 +34,7 @@ Server sử dụng kiến trúc Bất đồng bộ (Asyncio) và có cơ chế g
    ```bash
    python src/client.py
    ```
+   *(Để kết nối vào một Server máy khác hoặc Port khác, sử dụng: `python src/client.py --host <IP> --port 9090`)*
 3. **Đăng nhập:** Hệ thống sẽ yêu cầu nhập `username`. Ta nhập tên bất kỳ (vd: `alice` hoặc `bob`). *Lưu ý: Mỗi user sẽ có một không gian lưu trữ riêng biệt trên Server tại `storage/<username>`. Mô tả đồ án của thầy không yêu cầu mật khẩu để chặn trùng lặp; nếu nhiều Client đăng nhập cùng một username, họ sẽ dùng chung một không gian lưu trữ (file tải lên trùng tên sẽ ghi đè lên file cũ).*
 4. **Các lệnh hỗ trợ:** Tại dấu nhắc `FTP>`, ta có thể dùng các lệnh:
    - `LIST`: Xem danh sách các file hiện có trong thư mục cá nhân trên Server.
@@ -76,6 +78,7 @@ Mục đích của kịch bản này là kiểm tra độ trâu bò của Server
    ```bash
    python tests/simulate_multi_client.py
    ```
+   *(Nếu Server của bạn đang mở ở Port khác, hãy thêm cờ tương ứng: `python tests/simulate_multi_client.py --port 9090`)*
 3.
    - Script sẽ tự động sinh ra 10 file rác ngẫu nhiên.
    - Cùng một lúc, nó tạo ra 10 Client kết nối tới Server, đăng nhập từ `bot_1` đến `bot_10`.

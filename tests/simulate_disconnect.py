@@ -2,18 +2,19 @@ import socket
 import sys
 import os
 import time
+import struct
+import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import PORT, HOST
+from config import PORT
 from src.protocol import Opcode, pack_upload_req
-import struct
 
-def test_disconnect_binary():
+def test_disconnect_binary(host: str, port: int):
     """Test client disconnection mid-transfer during binary UPLOAD_REQ."""
-    print("Testing disconnect during binary UPLOAD_REQ...")
+    print(f"Testing disconnect during binary UPLOAD_REQ on {host}:{port}...")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        sock.connect((HOST, PORT))
+        sock.connect((host, port))
         print("Connected.")
         
         # Simulate login handshake
@@ -40,4 +41,9 @@ def test_disconnect_binary():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    test_disconnect_binary()
+    parser = argparse.ArgumentParser(description="Test Disconnect")
+    parser.add_argument('--host', type=str, default="127.0.0.1", help="Server host")
+    parser.add_argument('--port', type=int, default=PORT, help="Server port")
+    args = parser.parse_args()
+    
+    test_disconnect_binary(args.host, args.port)

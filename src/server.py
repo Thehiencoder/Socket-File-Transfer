@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import time
+import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -32,16 +33,16 @@ async def process_upload_req(reader: asyncio.StreamReader, writer: asyncio.Strea
     current_size = get_file_size(filepath)
     if current_size > 0 and current_size < file_size:
         # File incomplete -> Resume upload
-        logger.info(f"[{addr}] Resume UPLOAD {filename} from {current_size}/{file_size}")
+        logger.info(f"[{addr} | {username}] Resume UPLOAD {filename} from {current_size}/{file_size}")
         ack_payload = pack_ack_offset(current_size)
         received = current_size
     else:
         # Overwrite (according to user overwrite policy)
         if current_size > 0:
-            logger.info(f"[{addr}] Overwrite existing {filename}")
+            logger.info(f"[{addr} | {username}] Overwrite existing {filename}")
             # Delete old file for clean overwrite
             os.remove(filepath)
-        logger.info(f"[{addr}] Start UPLOAD {filename} ({file_size} bytes)")
+        logger.info(f"[{addr} | {username}] Start UPLOAD {filename} ({file_size} bytes)")
         ack_payload = pack_ack_offset(0)
         received = 0
         
@@ -68,7 +69,7 @@ async def process_upload_req(reader: asyncio.StreamReader, writer: asyncio.Strea
         
     elapsed = time.time() - start_time
     speed = (bytes_this_session / 1024) / elapsed if elapsed > 0 else 0
-    logger.info(f"[{addr}] UPLOAD {filename} completed. Session avg speed: {speed:.2f} KB/s")
+    logger.info(f"[{addr} | {username}] UPLOAD {filename} completed. Session avg speed: {speed:.2f} KB/s")
     
     # Receive checksum from client and compare
     chunk_op, _, checksum_payload = await recv_binary_packet_async(reader)
@@ -99,7 +100,7 @@ async def process_download_req(writer: asyncio.StreamWriter, payload: bytes, use
     await send_binary_packet_async(writer, Opcode.ACK, user_id, struct.pack("!Q", file_size))
     
     sent = offset
-    logger.info(f"[{addr}] Start DOWNLOAD {filename} from {sent}/{file_size}")
+    logger.info(f"[{addr} | {username}] Start DOWNLOAD {filename} from {sent}/{file_size}")
     start_time = time.time()
     bytes_this_session = 0
     
@@ -119,7 +120,7 @@ async def process_download_req(writer: asyncio.StreamWriter, payload: bytes, use
         
     elapsed = time.time() - start_time
     speed = (bytes_this_session / 1024) / elapsed if elapsed > 0 else 0
-    logger.info(f"[{addr}] DOWNLOAD {filename} completed. Session avg speed: {speed:.2f} KB/s")
+    logger.info(f"[{addr} | {username}] DOWNLOAD {filename} completed. Session avg speed: {speed:.2f} KB/s")
     
     # Send checksum for client verification
     server_checksum = await asyncio.get_running_loop().run_in_executor(
@@ -128,13 +129,13 @@ async def process_download_req(writer: asyncio.StreamWriter, payload: bytes, use
     await send_text_payload_async(writer, Opcode.CHECKSUM_RESP, user_id, server_checksum)
 
 
-async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter, speed_limit: int):
     """Main loop to process commands from a connected client."""
     addr = writer.get_extra_info('peername')
     logger.info(f"Connected to {addr}")
     
     # Initialize dedicated throttler for this client connection
-    throttler = TokenBucket(SPEED_LIMIT_KBPS)
+    throttler = TokenBucket(speed_limit)
     username = "default"
     user_id = 0
     
@@ -174,7 +175,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         await writer.wait_closed()
         logger.info(f"Disconnected from {addr}")
 
-async def client_handler_wrapper(reader, writer):
+async def client_handler_wrapper(reader, writer, speed_limit):
     """Wrapper to enforce maximum client connection limits."""
     if client_semaphore.locked():
         logger.warning(f"Max clients ({MAX_CLIENTS}) reached. Rejecting connection.")
@@ -184,11 +185,13 @@ async def client_handler_wrapper(reader, writer):
         return
         
     async with client_semaphore:
-        await handle_client(reader, writer)
+        await handle_client(reader, writer, speed_limit)
 
-async def main():
+async def main(host, port, speed_limit):
     """Start the asynchronous socket server."""
-    server = await asyncio.start_server(client_handler_wrapper, HOST, PORT)
+    # Use lambda to pass speed_limit to the handler wrapper
+    handler = lambda r, w: client_handler_wrapper(r, w, speed_limit)
+    server = await asyncio.start_server(handler, host, port)
     addr = server.sockets[0].getsockname()
     logger.info(f"Phase 2 Async Server started on {addr}")
     
@@ -196,7 +199,13 @@ async def main():
         await server.serve_forever()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Socket File Transfer Server")
+    parser.add_argument('--host', type=str, default=HOST, help="Server bind host")
+    parser.add_argument('--port', type=int, default=PORT, help="Server bind port")
+    parser.add_argument('--speed', type=int, default=SPEED_LIMIT_KBPS, help="Speed limit in KBps")
+    args = parser.parse_args()
+
     try:
-        asyncio.run(main())
+        asyncio.run(main(args.host, args.port, args.speed))
     except KeyboardInterrupt:
         logger.info("Server shutting down.")

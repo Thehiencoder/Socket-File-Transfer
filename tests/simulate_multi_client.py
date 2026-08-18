@@ -3,16 +3,17 @@ import os
 import sys
 import time
 import random
+import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import PORT, HOST, MAX_CLIENTS
 from src.protocol import Opcode, pack_upload_req, recv_binary_packet_async
 import struct
 
-async def simulate_client(client_id: int):
+async def simulate_client(client_id: int, host: str, port: int):
     """Simulate a client connecting, uploading dummy data, and disconnecting safely or abruptly."""
     try:
-        reader, writer = await asyncio.open_connection(HOST, PORT)
+        reader, writer = await asyncio.open_connection(host, port)
         username = f"bot_{client_id}"
         print(f"[Client {client_id}] Connected as {username}")
         
@@ -65,18 +66,23 @@ async def simulate_client(client_id: int):
     except Exception as e:
         print(f"[Client {client_id}] Error: {e}")
 
-async def main():
+async def main(host, port):
     NUM_CLIENTS = MAX_CLIENTS
-    print(f"Starting stress test simulation with {NUM_CLIENTS} concurrent clients...")
+    print(f"Starting stress test simulation with {NUM_CLIENTS} concurrent clients on {host}:{port}...")
     start_time = time.time()
     
     # Create and execute tasks concurrently
-    tasks = [simulate_client(i) for i in range(1, NUM_CLIENTS + 1)]
+    tasks = [simulate_client(i, host, port) for i in range(1, NUM_CLIENTS + 1)]
     await asyncio.gather(*tasks)
     
     print(f"Stress test completed in {time.time() - start_time:.2f} seconds.")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Stress Test Client")
+    parser.add_argument('--host', type=str, default="127.0.0.1", help="Server host to connect to")
+    parser.add_argument('--port', type=int, default=PORT, help="Server port")
+    args = parser.parse_args()
+
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(main())
+    asyncio.run(main(args.host, args.port))

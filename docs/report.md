@@ -111,6 +111,10 @@ Giả sử Client gửi lệnh **LOGIN** với Username là `"Alice"` (`5` bytes
 ### **3.3. Cơ chế truyền tiếp (Offset-based resume)**
 - Hệ thống hỗ trợ Resume cho cả 2 chiều Upload và Download. Khi một kết nối bị ngắt giữa chừng, Client hoặc Server sẽ kiểm tra dung lượng file đang tải dở trên đĩa cứng và đóng gói kích thước này (Offset) vào gói tin `UPLOAD_REQ` hoặc `ACK`. Phía còn lại sẽ thực hiện hành động nhảy (Seek) tới đúng offset tương ứng để bắt đầu đọc/ghi từ byte đó trở đi, tiết kiệm 100% tài nguyên mạng dư thừa.
 
+### **3.4. Cấu hình động & Nhật ký (Logging) chi tiết**
+- **Cấu hình động:** Hệ thống hỗ trợ thay đổi cấu hình linh hoạt thông qua Biến môi trường (Environment Variables) hoặc Cờ lệnh (CLI Flags). Thay vì phải sửa mã nguồn, quản trị viên có thể dễ dàng khởi động hệ thống với cấu hình mới ngay trên Terminal (Ví dụ: `py src/server.py --port 9090 --speed 1000`). Điều này giúp việc triển khai qua các Tunnel (như Ngrok, Playit, Radmin VPN) trở nên cực kỳ tiện lợi.
+- **Nhật ký truy vết (Audit Logging):** Mọi thao tác truyền tải file đều được Server ghi nhận lại chi tiết bao gồm cả Địa chỉ IP và Tên đăng nhập (Username) của người dùng. Việc này giúp dễ dàng quản lý và giám sát trực quan (Ví dụ: `[127.0.0.1:41235 | hoang_dz] Start UPLOAD phim.mp4...`).
+
 
 ## **4. Kết quả kiểm thử**
 
@@ -120,56 +124,107 @@ Giả sử Client gửi lệnh **LOGIN** với Username là `"Alice"` (`5` bytes
   - 10 Client xử lý thành công không xảy ra Deadlock.
   
 ```text
-2026-08-07 21:32:15,721 [INFO] - Connected to ('127.0.0.1', 53322)
-2026-08-07 21:32:15,722 [INFO] - Connected to ('127.0.0.1', 53323)
-2026-08-07 21:32:15,723 [INFO] - Connected to ('127.0.0.1', 53324)
-2026-08-07 21:32:15,724 [INFO] - Connected to ('127.0.0.1', 53325)
-2026-08-07 21:32:15,724 [INFO] - Connected to ('127.0.0.1', 53326)
-2026-08-07 21:32:15,725 [INFO] - Connected to ('127.0.0.1', 53327)
-2026-08-07 21:32:15,726 [INFO] - Connected to ('127.0.0.1', 53328)
-2026-08-07 21:32:15,728 [INFO] - Connected to ('127.0.0.1', 53329)
-2026-08-07 21:32:15,729 [INFO] - Connected to ('127.0.0.1', 53330)
-2026-08-07 21:32:15,730 [INFO] - Connected to ('127.0.0.1', 53331)
-2026-08-07 21:32:15,731 [INFO] - [('127.0.0.1', 53323)] LOGIN success as 'bot_2'
-2026-08-07 21:32:15,734 [INFO] - [('127.0.0.1', 53328)] LOGIN success as 'bot_7'
-2026-08-07 21:32:15,734 [INFO] - [('127.0.0.1', 53329)] LOGIN success as 'bot_8'
-2026-08-07 21:32:15,736 [INFO] - [('127.0.0.1', 53326)] LOGIN success as 'bot_5'
-2026-08-07 21:32:15,738 [INFO] - [('127.0.0.1', 53322)] LOGIN success as 'bot_1'
-2026-08-07 21:32:15,738 [INFO] - [('127.0.0.1', 53327)] LOGIN success as 'bot_6'
-2026-08-07 21:32:15,739 [INFO] - [('127.0.0.1', 53330)] LOGIN success as 'bot_9'
-2026-08-07 21:32:15,740 [INFO] - [('127.0.0.1', 53331)] LOGIN success as 'bot_10'
-2026-08-07 21:32:15,741 [INFO] - [('127.0.0.1', 53324)] LOGIN success as 'bot_3'
-2026-08-07 21:32:15,741 [INFO] - [('127.0.0.1', 53325)] LOGIN success as 'bot_4'
-2026-08-07 21:32:15,893 [INFO] - [('127.0.0.1', 53327)] Start UPLOAD dummy_6.bin (10167 bytes)
-2026-08-07 21:32:15,897 [INFO] - [('127.0.0.1', 53327)] UPLOAD dummy_6.bin completed. Session avg speed: 3244.57 KB/s
-2026-08-07 21:32:15,913 [INFO] - Disconnected from ('127.0.0.1', 53327)
-2026-08-07 21:32:15,920 [INFO] - [('127.0.0.1', 53326)] Start UPLOAD dummy_5.bin (39000 bytes)
-2026-08-07 21:32:15,928 [INFO] - [('127.0.0.1', 53328)] Start UPLOAD dummy_7.bin (12852 bytes)
-2026-08-07 21:32:15,932 [INFO] - [('127.0.0.1', 53326)] UPLOAD dummy_5.bin completed. Session avg speed: 7940.35 KB/s
-2026-08-07 21:32:15,934 [INFO] - [('127.0.0.1', 53328)] UPLOAD dummy_7.bin completed. Session avg speed: 5188.43 KB/s
-2026-08-07 21:32:15,948 [INFO] - Disconnected from ('127.0.0.1', 53326)
-2026-08-07 21:32:15,955 [INFO] - [('127.0.0.1', 53330)] Start UPLOAD dummy_9.bin (28420 bytes)
-2026-08-07 21:32:15,956 [INFO] - Disconnected from ('127.0.0.1', 53328)
-2026-08-07 21:32:15,958 [INFO] - [('127.0.0.1', 53330)] UPLOAD dummy_9.bin completed. Session avg speed: 12577.88 KB/s
-2026-08-07 21:32:15,976 [INFO] - Disconnected from ('127.0.0.1', 53330)
-2026-08-07 21:32:15,990 [INFO] - [('127.0.0.1', 53331)] Start UPLOAD dummy_10.bin (40418 bytes)
-2026-08-07 21:32:15,994 [INFO] - [('127.0.0.1', 53331)] UPLOAD dummy_10.bin completed. Session avg speed: 20368.13 KB/s
-2026-08-07 21:32:16,009 [INFO] - Disconnected from ('127.0.0.1', 53331)
-2026-08-07 21:32:16,014 [INFO] - [('127.0.0.1', 53324)] Start UPLOAD dummy_3.bin (10598 bytes)
-2026-08-07 21:32:16,018 [INFO] - [('127.0.0.1', 53324)] UPLOAD dummy_3.bin completed. Session avg speed: 4272.58 KB/s
-2026-08-07 21:32:16,037 [INFO] - Disconnected from ('127.0.0.1', 53324)
-2026-08-07 21:32:16,040 [INFO] - [('127.0.0.1', 53323)] Start UPLOAD dummy_2.bin (14237 bytes)
-2026-08-07 21:32:16,043 [INFO] - [('127.0.0.1', 53323)] UPLOAD dummy_2.bin completed. Session avg speed: 7231.49 KB/s
-2026-08-07 21:32:16,055 [INFO] - [('127.0.0.1', 53325)] Start UPLOAD dummy_4.bin (15385 bytes)
-2026-08-07 21:32:16,062 [INFO] - Disconnected from ('127.0.0.1', 53323)
-2026-08-07 21:32:16,064 [INFO] - [('127.0.0.1', 53325)] UPLOAD dummy_4.bin completed. Session avg speed: 6949.38 KB/s
-2026-08-07 21:32:16,080 [INFO] - Disconnected from ('127.0.0.1', 53325)
-2026-08-07 21:32:16,086 [INFO] - [('127.0.0.1', 53329)] Start UPLOAD dummy_8.bin (28205 bytes)
-2026-08-07 21:32:16,090 [INFO] - [('127.0.0.1', 53329)] UPLOAD dummy_8.bin completed. Session avg speed: 13346.54 KB/s
-2026-08-07 21:32:16,101 [INFO] - Disconnected from ('127.0.0.1', 53329)
-2026-08-07 21:32:16,167 [INFO] - [('127.0.0.1', 53322)] Start UPLOAD dummy_1.bin (40397 bytes)
-2026-08-07 21:32:16,172 [INFO] - [('127.0.0.1', 53322)] UPLOAD dummy_1.bin completed. Session avg speed: 15821.97 KB/s
-2026-08-07 21:32:16,195 [INFO] - Disconnected from ('127.0.0.1', 53322)
+server:
+2026-08-18 07:42:33,714 [INFO] - Connected to ('127.0.0.1', 52076)
+2026-08-18 07:42:33,715 [INFO] - Connected to ('127.0.0.1', 52077)
+2026-08-18 07:42:33,717 [INFO] - Connected to ('127.0.0.1', 52078)
+2026-08-18 07:42:33,717 [INFO] - Connected to ('127.0.0.1', 52079)
+2026-08-18 07:42:33,718 [INFO] - Connected to ('127.0.0.1', 52080)
+2026-08-18 07:42:33,720 [INFO] - Connected to ('127.0.0.1', 52081)
+2026-08-18 07:42:33,721 [INFO] - Connected to ('127.0.0.1', 52082)
+2026-08-18 07:42:33,722 [INFO] - Connected to ('127.0.0.1', 52083)
+2026-08-18 07:42:33,722 [INFO] - Connected to ('127.0.0.1', 52084)
+2026-08-18 07:42:33,723 [INFO] - Connected to ('127.0.0.1', 52085)
+2026-08-18 07:42:33,724 [INFO] - [('127.0.0.1', 52078)] LOGIN success as 'bot_3'
+2026-08-18 07:42:33,726 [INFO] - [('127.0.0.1', 52077)] LOGIN success as 'bot_2'
+2026-08-18 07:42:33,727 [INFO] - [('127.0.0.1', 52079)] LOGIN success as 'bot_4'
+2026-08-18 07:42:33,729 [INFO] - [('127.0.0.1', 52080)] LOGIN success as 'bot_5'
+2026-08-18 07:42:33,729 [INFO] - [('127.0.0.1', 52083)] LOGIN success as 'bot_8'
+2026-08-18 07:42:33,730 [INFO] - [('127.0.0.1', 52084)] LOGIN success as 'bot_9'
+2026-08-18 07:42:33,730 [INFO] - [('127.0.0.1', 52085)] LOGIN success as 'bot_10'
+2026-08-18 07:42:33,731 [INFO] - [('127.0.0.1', 52076)] LOGIN success as 'bot_1'
+2026-08-18 07:42:33,736 [INFO] - [('127.0.0.1', 52082)] LOGIN success as 'bot_7'
+2026-08-18 07:42:33,737 [INFO] - [('127.0.0.1', 52081)] LOGIN success as 'bot_6'
+2026-08-18 07:42:33,876 [INFO] - [('127.0.0.1', 52082) | bot_7] Overwrite existing dummy_7.bin
+2026-08-18 07:42:33,877 [INFO] - [('127.0.0.1', 52082) | bot_7] Start UPLOAD dummy_7.bin (18444 bytes)
+2026-08-18 07:42:33,879 [INFO] - [('127.0.0.1', 52082) | bot_7] UPLOAD dummy_7.bin completed. Session avg speed: 11486.49 KB/s
+2026-08-18 07:42:33,900 [INFO] - Disconnected from ('127.0.0.1', 52082)
+2026-08-18 07:42:33,925 [INFO] - [('127.0.0.1', 52081) | bot_6] Resume UPLOAD dummy_6.bin from 1552/40297
+2026-08-18 07:42:33,927 [INFO] - [('127.0.0.1', 52081) | bot_6] UPLOAD dummy_6.bin completed. Session avg speed: 27904.74 KB/s
+2026-08-18 07:42:33,940 [INFO] - Disconnected from ('127.0.0.1', 52081)
+2026-08-18 07:42:33,950 [INFO] - [('127.0.0.1', 52078) | bot_3] Overwrite existing dummy_3.bin
+2026-08-18 07:42:33,952 [INFO] - [('127.0.0.1', 52078) | bot_3] Start UPLOAD dummy_3.bin (14862 bytes)
+2026-08-18 07:42:33,954 [INFO] - [('127.0.0.1', 52078) | bot_3] UPLOAD dummy_3.bin completed. Session avg speed: 9169.27 KB/s
+2026-08-18 07:42:33,972 [INFO] - Disconnected from ('127.0.0.1', 52078)
+2026-08-18 07:42:33,996 [INFO] - [('127.0.0.1', 52085) | bot_10] Start UPLOAD dummy_10.bin (38515 bytes)
+2026-08-18 07:42:34,001 [INFO] - [('127.0.0.1', 52085) | bot_10] UPLOAD dummy_10.bin completed. Session avg speed: 18490.09 KB/s
+2026-08-18 07:42:34,015 [INFO] - Disconnected from ('127.0.0.1', 52085)
+2026-08-18 07:42:34,086 [INFO] - [('127.0.0.1', 52079) | bot_4] Resume UPLOAD dummy_4.bin from 35296/43965
+2026-08-18 07:42:34,089 [INFO] - [('127.0.0.1', 52079) | bot_4] UPLOAD dummy_4.bin completed. Session avg speed: 26117.57 KB/s
+2026-08-18 07:42:34,101 [INFO] - Disconnected from ('127.0.0.1', 52079)
+2026-08-18 07:42:34,112 [INFO] - [('127.0.0.1', 52084) | bot_9] Overwrite existing dummy_9.bin
+2026-08-18 07:42:34,113 [INFO] - [('127.0.0.1', 52084) | bot_9] Start UPLOAD dummy_9.bin (17310 bytes)
+2026-08-18 07:42:34,117 [INFO] - [('127.0.0.1', 52084) | bot_9] UPLOAD dummy_9.bin completed. Session avg speed: 7345.05 KB/s
+2026-08-18 07:42:34,135 [INFO] - Disconnected from ('127.0.0.1', 52084)
+2026-08-18 07:42:34,145 [INFO] - [('127.0.0.1', 52077) | bot_2] Resume UPLOAD dummy_2.bin from 21148/41584
+2026-08-18 07:42:34,148 [INFO] - [('127.0.0.1', 52077) | bot_2] UPLOAD dummy_2.bin completed. Session avg speed: 18700.93 KB/s
+2026-08-18 07:42:34,163 [INFO] - Disconnected from ('127.0.0.1', 52077)
+2026-08-18 07:42:34,165 [INFO] - [('127.0.0.1', 52083) | bot_8] Overwrite existing dummy_8.bin
+2026-08-18 07:42:34,166 [INFO] - [('127.0.0.1', 52083) | bot_8] Start UPLOAD dummy_8.bin (27190 bytes)
+2026-08-18 07:42:34,169 [INFO] - [('127.0.0.1', 52083) | bot_8] UPLOAD dummy_8.bin completed. Session avg speed: 16135.94 KB/s
+2026-08-18 07:42:34,183 [INFO] - Disconnected from ('127.0.0.1', 52083)
+2026-08-18 07:42:34,212 [INFO] - [('127.0.0.1', 52076) | bot_1] Overwrite existing dummy_1.bin
+2026-08-18 07:42:34,214 [INFO] - [('127.0.0.1', 52076) | bot_1] Start UPLOAD dummy_1.bin (2036 bytes)
+2026-08-18 07:42:34,217 [INFO] - [('127.0.0.1', 52076) | bot_1] UPLOAD dummy_1.bin completed. Session avg speed: 987.85 KB/s 
+2026-08-18 07:42:34,229 [INFO] - [('127.0.0.1', 52080) | bot_5] Overwrite existing dummy_5.bin
+2026-08-18 07:42:34,231 [INFO] - [('127.0.0.1', 52080) | bot_5] Start UPLOAD dummy_5.bin (48570 bytes)
+2026-08-18 07:42:34,232 [INFO] - Disconnected from ('127.0.0.1', 52076)
+2026-08-18 07:42:34,234 [INFO] - [('127.0.0.1', 52080) | bot_5] UPLOAD dummy_5.bin completed. Session avg speed: 17816.83 KB/s
+2026-08-18 07:42:34,259 [INFO] - Disconnected from ('127.0.0.1', 52080)
+
+client:
+Starting stress test simulation with 10 concurrent clients on 127.0.0.1:9090...
+[Client 3] Connected as bot_3
+[Client 2] Connected as bot_2
+[Client 4] Connected as bot_4
+[Client 5] Connected as bot_5
+[Client 8] Connected as bot_8
+[Client 9] Connected as bot_9
+[Client 10] Connected as bot_10
+[Client 1] Connected as bot_1
+[Client 7] Connected as bot_7
+[Client 6] Connected as bot_6
+[Client 7] Uploaded dummy_7.bin (18444 bytes)
+[Client 7] Server verified checksum successfully.
+[Client 7] Finished and disconnected safely.
+[Client 6] Uploaded dummy_6.bin (40297 bytes)
+[Client 6] Server verified checksum successfully.
+[Client 6] Finished and disconnected safely.
+[Client 3] Uploaded dummy_3.bin (14862 bytes)
+[Client 3] Server verified checksum successfully.
+[Client 3] Finished and disconnected safely.
+[Client 10] Uploaded dummy_10.bin (38515 bytes)
+[Client 10] Server verified checksum successfully.
+[Client 10] Finished and disconnected safely.
+[Client 4] Uploaded dummy_4.bin (43965 bytes)
+[Client 4] Server verified checksum successfully.
+[Client 4] Finished and disconnected safely.
+[Client 9] Uploaded dummy_9.bin (17310 bytes)
+[Client 9] Server verified checksum successfully.
+[Client 9] Finished and disconnected safely.
+[Client 2] Uploaded dummy_2.bin (41584 bytes)
+[Client 2] Server verified checksum successfully.
+[Client 2] Finished and disconnected safely.
+[Client 8] Uploaded dummy_8.bin (27190 bytes)
+[Client 8] Server verified checksum successfully.
+[Client 8] Finished and disconnected safely.
+[Client 1] Uploaded dummy_1.bin (2036 bytes)
+[Client 1] Server verified checksum successfully.
+[Client 1] Finished and disconnected safely.
+[Client 5] Uploaded dummy_5.bin (48570 bytes)
+[Client 5] Server verified checksum successfully.
+[Client 5] Finished and disconnected safely.
+Stress test completed in 0.52 seconds.
 ```
 
 ### **4.2. Bài kiểm tra giới hạn băng thông & tracking thời gian thực**
@@ -179,19 +234,31 @@ Giả sử Client gửi lệnh **LOGIN** với Username là `"Alice"` (`5` bytes
   - Tốc độ hội tụ và duy trì ổn định ở mức ~502 KB/s (Gần tuyệt đối với cấu hình 500 KB/s do tính chất Burst của Token Bucket).
 
 <p align="center">
-  <img src="../anh_chup_toc_do_truyen_file.png" alt="Minh chứng tốc độ và tiến trình truyền tải" width="90%">
+  <img src="../anh_chup_log_server_upload.png" alt="Kết quả log từ server khi thực hiện xong lệnh UPLOAD" width="90%">
+</p>
+
+<p align="center">
+  <img src="../anh_chup_log_client_upload.png" alt="Kết quả log từ client khi thực hiện xong lệnh UPLOAD" width="90%">
+</p>
+
+<p align="center">
+  <img src="../anh_chup_log_server_download.png" alt="Kết quả log từ server khi thực hiện xong lệnh DOWNLOAD" width="90%">
+</p>
+
+<p align="center">
+  <img src="../anh_chup_log_client_download.png" alt="Kết quả log từ client khi thực hiện xong lệnh DOWNLOAD" width="90%">
 </p>
 
 ### **4.3. Bài kiểm tra resume & checksum**
-- **Kịch bản:** Upload file 104MB, ngắt kết nối `Ctrl+C` tại thời điểm 9%. Sau đó chạy lại lệnh upload đúng file đó.
+- **Kịch bản:** Upload file 99.4MB, ngắt kết nối `Ctrl+C` tại thời điểm 9%. Sau đó chạy lại lệnh upload đúng file đó.
 - **Kết quả:** 
-  - Terminal ghi nhận rõ ràng: `Resuming upload from 9912320/104255184 bytes...`
+  - Terminal ghi nhận rõ ràng: `Resuming upload from 9355264/104255184 bytes...`
   - Cuối quá trình tải, MD5 Hash giữa Client và Server khớp nhau hoàn toàn, Terminal báo `Upload successful! Checksum verified.`.
 
 <p align="center">
-  <img src="../anh_chup_resume.png" alt="Minh chứng truyền tiếp khi ngắt kết nối" width="90%">
+  <img src="../anh_chup_log_server_resume.png" alt="Kết quả log từ server khi resume và truyền xong file" width="90%">
 </p>
 
 <p align="center">
-  <img src="../anh_chup_verify_checksum.png" alt="Minh chứng kiểm tra tính toàn vẹn (Verify Checksum)" width="90%">
+  <img src="../anh_chup_log_client_resume_va_checksum.png" alt="Kết quả log từ client khi resume và checksum xong" width="90%">
 </p>

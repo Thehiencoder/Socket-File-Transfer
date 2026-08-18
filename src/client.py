@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import struct
+import argparse
 from tqdm import tqdm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,8 +18,10 @@ from src.protocol import (
 
 class AsyncClient:
     """Asynchronous socket client supporting authentication, list, resumable upload/download, and checksum verification."""
-    def __init__(self, username: str):
+    def __init__(self, username: str, host: str, port: int):
         self.username = username
+        self.host = host
+        self.port = port
         self.user_id = 0
         self.reader = None
         self.writer = None
@@ -26,7 +29,7 @@ class AsyncClient:
     async def connect(self):
         """Establish connection with the server and perform login handshake."""
         try:
-            self.reader, self.writer = await asyncio.open_connection(HOST, PORT)
+            self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
             # Send login command
             await send_text_payload_async(self.writer, Opcode.LOGIN, 0, self.username)
             opcode, self.user_id, payload = await recv_binary_packet_async(self.reader)
@@ -148,26 +151,25 @@ class AsyncClient:
         if offset > 0 and offset < file_size:
             print(f"Resuming download from {offset}/{file_size} bytes...")
         elif offset >= file_size and file_size > 0:
-            print("File is already fully downloaded.")
-            # Server might still send checksum, client can self-check
-            return
+            print("File is already fully downloaded. Verifying checksum...")
         else:
             print(f"Downloading {filename} ({file_size} bytes)...")
             
         received = offset
         
-        # Tqdm Progress Bar
-        with tqdm(total=file_size, initial=received, unit='B', unit_scale=True, desc=filename) as pbar:
-            while received < file_size:
-                chunk_op, _, chunk_payload = await recv_binary_packet_async(self.reader)
-                if chunk_op != Opcode.FILE_CHUNK:
-                    break
-                    
-                await asyncio.get_running_loop().run_in_executor(
-                    None, write_file_chunk, filepath, received, chunk_payload
-                )
-                received += len(chunk_payload)
-                pbar.update(len(chunk_payload))
+        if received < file_size:
+            # Tqdm Progress Bar
+            with tqdm(total=file_size, initial=received, unit='B', unit_scale=True, desc=filename) as pbar:
+                while received < file_size:
+                    chunk_op, _, chunk_payload = await recv_binary_packet_async(self.reader)
+                    if chunk_op != Opcode.FILE_CHUNK:
+                        break
+                        
+                    await asyncio.get_running_loop().run_in_executor(
+                        None, write_file_chunk, filepath, received, chunk_payload
+                    )
+                    received += len(chunk_payload)
+                    pbar.update(len(chunk_payload))
                 
         # Receive checksum from server
         opcode, _, payload = await recv_binary_packet_async(self.reader)
@@ -221,19 +223,24 @@ async def interactive_shell(client: AsyncClient):
         except Exception as e:
             print(f"Error executing command: {e}")
 
-async def main():
+async def main(host, port):
     """Main entry point to initialize client connection and interactive shell."""
     username = input("Enter username: ").strip()
     if not username:
         username = "guest"
         
-    client = AsyncClient(username)
+    client = AsyncClient(username, host, port)
     if await client.connect():
         await interactive_shell(client)
         client.disconnect()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Socket File Transfer Client")
+    parser.add_argument('--host', type=str, default=HOST, help="Server host to connect to")
+    parser.add_argument('--port', type=int, default=PORT, help="Server port")
+    args = parser.parse_args()
+
     # Workaround for "Event loop is closed" RuntimeError on Windows (Python 3.8+)
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(main())
+    asyncio.run(main(args.host, args.port))
