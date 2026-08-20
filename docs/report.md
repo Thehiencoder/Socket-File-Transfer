@@ -1,4 +1,8 @@
 # **Báo Cáo Kỹ Thuật - Giai Đoạn 2**
+### **Team Members:**
+*   **Hoang Nguyen The Hien** - Student ID: 25127326
+*   **Phan Quoc Bao** - Student ID: 25127282
+*   **Luu Minh Tien** - Student ID: 25127242
 
 ## **1. Mô tả kiến trúc hệ thống**
 
